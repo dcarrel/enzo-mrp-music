@@ -1,0 +1,9 @@
+# use glob syntax.
+syntax: glob
+
+*.conf
+*.conf_log.txt
+*.pyc
+wnoise_*.bin
+input_powerspec_total.txt
+*.dat

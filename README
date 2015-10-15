@@ -1,0 +1,45 @@
+Description
+===========
+The scripts included in this package run MUSIC after setting the
+necessary parameters to their correct values to focus on a Lagrangian
+volume of some halo.
+
+Usage
+=====
+
+$ python enzo-mrp-music.py <level>
+
+<level> is the finest level in the initial conditions to be generated.
+
+Procedure
+=========
+
+1. Collect parameters from the original set of initial conditions
+   (ICs) to obtain the shift of the box.
+
+2. Given a halo position and mass, it will calculate the Lagrangian
+   volume (LV) at the initial redshift.
+
+3. With this LV, it will modify the appropriate parameters and supply
+   a particle position list to MUSIC.  Afterwards, MUSIC is
+   automatically executed.
+
+   * Four options for the LV are given: box, ellipsoid, convex hull,
+     or exact.
+
+4. The initial conditions directory is then moved to some
+   user-specified location.
+
+Example workflow
+================
+
+1. Run a uniform grid simulation
+2. Find halo of interest in the last output
+3. Modify halo_info and other parameters in enzo-mrp-music.py.
+   The parameters are documented above their declaration.
+4. Run "python enzo-mrp-music.py 1"
+5. Run simulation with 1 nested grid with the appropriate Enzo
+   parameter file.  MUSIC will only give a skeleton parameter file,
+   but the must-refine and nested grid parameters are given in it.
+6. If another nested grid is needed, goto step #2 and increase the
+   level argument by 1.  If not, you're finished!
