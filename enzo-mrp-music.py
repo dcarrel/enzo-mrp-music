@@ -190,8 +190,7 @@ os.system("%s/MUSIC %s" % (music_exe_dir, new_config_file))
 #
 # backup: Copy original file with the suffix .bak
 if shape_type == "exact":
-    particle_only_mask(new_config_file, initial_max_level, smooth_edges=True,
-                       backup=True)
+    particle_only_mask(new_config_file, smooth_edges=True, backup=True)
 
 # Modify the skeleton Enzo parameter file created by MUSIC to include
 # the parameters for must-refine particles.

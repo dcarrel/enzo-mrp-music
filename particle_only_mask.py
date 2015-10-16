@@ -7,8 +7,7 @@ import h5py as h5
 #smooth_edges = True  # smooth the edges of the exact Lagrangian region
 #backup = True   # make a backup of the original RefinementMask, just in case!
 
-def particle_only_mask(music_config, original_run_levelmax, smooth_edges=True,
-                       backup=True):
+def particle_only_mask(music_config, smooth_edges=True, backup=True):
 
     # Error check
     if not os.path.exists(music_config):
@@ -28,10 +27,10 @@ def particle_only_mask(music_config, original_run_levelmax, smooth_edges=True,
     music_parms = cp.read(music_config)
     pt_file = cp.get("setup", "region_point_file")
     pt_shift = map(int, cp.get("setup", "region_point_shift").split(","))
-    pt_level = int(cp.get("setup", "region_point_levelmin"))
+    pt_level = cp.getint("setup", "region_point_levelmin")
     data_dir = cp.get("output", "filename")
-    levelmin = int(cp.get("setup", "levelmin"))
-    levelmax = int(cp.get("setup", "levelmax"))
+    levelmin = cp.getint("setup", "levelmin")
+    levelmax = cp.getint("setup", "levelmax")
     finest_level = levelmax - levelmin
 
     # Read origin of the innermost refine region from Enzo skeleton parameter file
@@ -63,7 +62,7 @@ def particle_only_mask(music_config, original_run_levelmax, smooth_edges=True,
     shift = np.array(box_shift) / 2.0**levelmin - np.array(pt_shift) / 2.0**pt_level
     centered = np.loadtxt(pt_file) + shift
     centered[centered < 0.0] += 1.0
-    pts = ((centered - origin) * 2.0**original_run_levelmax).astype('int32')
+    pts = ((centered - origin) * 2.0**levelmax).astype('int32')
 
     mask_name = "RefinementMask.%d" % (finest_level)
     mask_fn = "%s/%s" % (data_dir, mask_name)
@@ -77,14 +76,15 @@ def particle_only_mask(music_config, original_run_levelmax, smooth_edges=True,
     h5p = h5.File(mask_fn, "a")
     mask_shape = h5p[mask_name].shape[:0:-1]
 
-    plist_mask_lvl_diff = levelmax - original_run_levelmax
-    dx = 1 << plist_mask_lvl_diff
+    # Deposit particles in a mask with 2*dx which is the finest
+    # initial grid of the previous simulation.
+    dx = 2
     newmask_shape = np.ceil(np.array(mask_shape) / float(dx)).astype('int32')
-    #print mask_shape, newmask_shape
     newmask = -np.ones(newmask_shape, dtype='int32')
-    H, edges = np.histogramdd(pts, bins=newmask_shape, 
+    H, edges = np.histogramdd(pts/float(dx), bins=newmask_shape, 
                               range=[[0, newmask_shape[0]], [0, newmask_shape[1]], 
                                      [0, newmask_shape[2]]])
+    #import pdb; pdb.set_trace()
     # Smooth edges with Gaussian filter
     if smooth_edges:
         print "Modifying RefinementMask: Smoothing particle mask..."
@@ -103,3 +103,8 @@ def particle_only_mask(music_config, original_run_levelmax, smooth_edges=True,
         h5p[mask_name][0,:,:,:] = newmask.T
     h5p.close()
     print "Modifying RefinementMask: Complete."
+
+
+if __name__ == "__main__":
+    fn = sys.argv[-1]
+    particle_only_mask(fn)
