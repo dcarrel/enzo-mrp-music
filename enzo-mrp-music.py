@@ -204,7 +204,7 @@ fp.write("\n"
          "#\n"
          "MustRefineParticlesCreateParticles = 3\n"
          "MustRefineParticlesRefineToLevel   = %d\n"
-         "CosmologySimulationParticleTypeName = RefinementMask)" % (level))
+         "CosmologySimulationParticleTypeName = RefinementMask" % (level))
 fp.close()
 
 # Copy initial conditions directory to the simulation run directory
