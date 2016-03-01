@@ -82,7 +82,7 @@ if level == 0:
 files_to_check = ["%s/MUSIC" % (music_exe_dir),
                   template_config,
                   simulation_run_directory]
-if original_config != None: files_to_check += original_config
+if original_config != None: files_to_check += [original_config]
 for f in files_to_check:                  
     if not os.path.exists(f):
         raise RuntimeError("File/directory not found: %s" % (f))
