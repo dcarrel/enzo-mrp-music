@@ -38,7 +38,9 @@ num_cores = None
 # Find the Lagrangian volume of some halo (TODO: extent to any
 # selector function besides a sphere) The routine either accepts the
 # radius and its units or mass in solar masses.  Two examples are
-# below.
+# below.  A "redshift" keyword can be given to specify the redshift
+# of the target halo.  If not given, it is assumed to be in the last
+# dataset that was created.
 #
 #halo_info = dict(center = [0.5, 0.5, 0.5],
 #                 rvir = 10.0, r_units = "kpc")
@@ -46,17 +48,9 @@ num_cores = None
 #                 mass = 4.13e11)  # most massive
 #halo_info = dict(center = [0.47444206,  0.48449989,  0.50042353],
 #                 mass=6.05e11)
-# halo_info = dict(center = [0.47097584,  0.48067752,  0.5347055],
-#                  mass=6.64e11)
-
-# L0
-# halo_info = dict(center = [0.016107879579, 0.698480248451, 0.881398022175],
-#                  mass=8.576449e+07) # rvir = 1324.63868554, r_units = "pc"
-
-# L1
-halo_info = dict(center = [0.505261003971, 0.484769880772, 0.503110170364],
-                 redshift = 12.7968753485,
-                 mass = 2.178362e+07) # rvir = 6.689543e+02., r_units = "pc"
+halo_info = dict(center = [0.47097584,  0.48067752,  0.5347055],
+                 redshift=1.0,
+                 mass=6.64e11)
 
 #
 # Safety factor to increase the radius of the sphere in units of the virial radius.
