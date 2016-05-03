@@ -41,23 +41,30 @@ def get_halo_sphere_particles(my_halo, par_file, radius_factor=5):
     pf = yt.load(par_file)
     halo_catalog = os.path.join(pf.fullpath, 'MergerHalos.out')
     if 'center' in my_halo:
-       my_halo_data = my_halo
+        my_halo_data = my_halo
+        center = pf.arr(my_halo['center'][0], my_halo['center'][1])
+        my_halo_data['center'] = center.in_units('code_length').v
     else:
         my_halo_data = read_from_catalog(my_halo, halo_catalog)
     rho_crit = rho_crit_now * pf.hubble_constant**2 * \
         (1 + pf.current_redshift)**3
+    if 'mass' in my_halo:
+        if isinstance(my_halo_data['mass'], tuple):
+            hmass = pf.quan(my_halo_data['mass'][0], my_halo_data['mass'][1])
+        else:
+            hmass = pf.quan(my_halo_data['mass'], 'Msun')
     if 'rvir' in my_halo:
         r_200 = my_halo['rvir'] / pf.length_unit.in_units(my_halo['r_units']) * \
                 pf.length_unit.in_units('Mpc')
     else:
-        r_200 = ((3. * my_halo_data['mass'] * Msun_to_g) / \
+        r_200 = ((3. * hmass.in_cgs().v) / \
                      (4. * np.pi * rho_crit * 200.))**(1./3.) / Mpc_to_cm
         
 
     print "Reading particles for a sphere surrounding halo %d." % my_halo['id']
-    print "Halo %d, pos: %f, %f, %f, mass: %e Msun, r_200: %.6f Mpc." % \
+    print "Halo %d, pos: %f, %f, %f, mass: %s, r_200: %.6f Mpc." % \
         (my_halo_data['id'], my_halo_data['center'][0], my_halo_data['center'][1],
-         my_halo_data['center'][2], my_halo_data['mass'], r_200)
+         my_halo_data['center'][2], hmass, r_200)
 
     my_sphere = pf.h.sphere(my_halo_data['center'], (radius_factor * r_200, 'Mpc'))
     return (my_halo_data['center'],
