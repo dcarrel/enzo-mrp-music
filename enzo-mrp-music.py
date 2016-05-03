@@ -18,6 +18,10 @@ simulation_name = "auto-wrapper"
 #
 # Template MUSIC configuration file.  These parameters will be
 # supplemented with parameters that describe the zoom-in setup.
+# Should have all of the random seeds in this file.  Can be the
+# original MUSIC configuration file that was used the for the unigrid
+# run, which in that case, this variable and original_config should be
+# the same filename.
 #
 template_config = "template.conf"
 #
@@ -43,17 +47,13 @@ num_cores = None
 #
 # Find the Lagrangian volume of some halo (TODO: extent to any
 # selector function besides a sphere) The routine either accepts the
-# radius and its units or mass in solar masses.  Two examples are
+# radius and its units or mass and its units.  Two examples are
 # below.
 #
-#halo_info = dict(center = [0.5, 0.5, 0.5],
-#                 rvir = 10.0, r_units = "kpc")
-#halo_info = dict(center = [0.957747,    0.13981756,  0.84212896],
-#                 mass = 4.13e11)  # most massive
-#halo_info = dict(center = [0.47444206,  0.48449989,  0.50042353],
-#                 mass=6.05e11)
-halo_info = dict(center = [0.47097584,  0.48067752,  0.5347055],
-                 mass=6.64e11)
+halo_info = dict(center = ([0.5, 0.5, 0.5], "kpc"),
+                 mass = (1e10, "Msun/h"))
+#halo_info = dict(center = ([0.5, 0.5, 0.5], "kpc"),
+#                 rvir = (10.0, "kpc"))
 #
 # Safety factor to increase the radius of the sphere in units of the virial radius.
 #
@@ -82,12 +82,14 @@ if level == 0:
 files_to_check = ["%s/MUSIC" % (music_exe_dir),
                   template_config,
                   simulation_run_directory]
-if original_config != None: files_to_check += original_config
+if original_config != None: files_to_check += [original_config]
 for f in files_to_check:                  
     if not os.path.exists(f):
         raise RuntimeError("File/directory not found: %s" % (f))
 
 # Set simulation directories
+# prev_sim_dir = os.path.join(simulation_run_directory, "%s-L%d" %
+#                             (simulation_name, level-1))
 prev_sim_dir = os.path.join(simulation_run_directory, "%s-L%d" %
                             (simulation_name, level-1))
 sim_dir = os.path.join(simulation_run_directory,
@@ -106,7 +108,10 @@ initial_max_level = music_cf0.getint("setup", "levelmax")
 # Obtain the shift of the Lagrangian region from the previous zoom-in
 # (or unigrid) simulation
 region_shift = [0, 0, 0]
-prev_config_logfile = "%s-L%d.conf_log.txt" % (simulation_name, level-1)
+if original_config != None and level == 1:
+    prev_config_logfile = "%s_log.txt" % (original_config)
+else:
+    prev_config_logfile = "%s-L%d.conf_log.txt" % (simulation_name, level-1)
 with open(prev_config_logfile) as fp:
     for l in fp.readlines():
         if l.find("setup/shift_x") >= 0:
