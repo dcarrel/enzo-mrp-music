@@ -7,3 +7,4 @@ syntax: glob
 wnoise_*.bin
 input_powerspec_total.txt
 *.dat
+*~
