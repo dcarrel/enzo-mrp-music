@@ -11,6 +11,7 @@ try:
     my_rank = comm.rank
     my_size = comm.size
     parallel = True
+    yt.enable_parallelism()
 except:
     my_rank = 0
     my_size = 1
@@ -60,11 +61,11 @@ def get_halo_sphere_particles(my_halo, par_file, radius_factor=5):
         r_200 = ((3. * hmass.in_cgs().v) / \
                      (4. * np.pi * rho_crit * 200.))**(1./3.) / Mpc_to_cm
         
-
-    print "Reading particles for a sphere surrounding halo %d." % my_halo['id']
-    print "Halo %d, pos: %f, %f, %f, mass: %s, r_200: %.6f Mpc." % \
-        (my_halo_data['id'], my_halo_data['center'][0], my_halo_data['center'][1],
-         my_halo_data['center'][2], hmass, r_200)
+    if yt.is_root():
+        print "Reading particles for a sphere surrounding halo %d." % my_halo['id']
+        print "Halo %d, pos: %f, %f, %f, mass: %s, r_200: %.6f Mpc." % \
+            (my_halo_data['id'], my_halo_data['center'][0], my_halo_data['center'][1],
+             my_halo_data['center'][2], hmass, r_200)
 
     my_sphere = pf.h.sphere(my_halo_data['center'], (radius_factor * r_200, 'Mpc'))
     return (my_halo_data['center'],
@@ -77,7 +78,8 @@ def get_halo_sphere_particles(my_halo, par_file, radius_factor=5):
 def get_halo_particles(my_halo, par_file):
     pf = yt.load(par_file)
 
-    print "Reading in particles for halo %d." % my_halo['id']
+    if yt.is_root():
+        print "Reading in particles for halo %d." % my_halo['id']
 
     halo_files = glob.glob(os.path.join(pf.fullpath, 'MergerHalos_*.h5'))
 
@@ -98,7 +100,8 @@ def get_halo_particles(my_halo, par_file):
         input.close()
     particle_positions = np.array([pos_x, pos_y, pos_z])
     if particle_indices is None:
-        print "Error: could not locate halo %d." % my_halo['id']
+        if yt.is_root():
+            print "Error: could not locate halo %d." % my_halo['id']
         return None
     return (particle_indices, particle_masses, particle_positions)
 
@@ -114,7 +117,8 @@ def get_halo_indices(my_halo, dataset, method='sphere', radius_factor=5.0):
 
     for i, axis in enumerate(axes):
         if particle_positions[i].max() - particle_positions[i].min() > 0.5:
-            print "Halo periodic in %s." % axis
+            if yt.is_root():
+                print "Halo periodic in %s." % axis
             particle_positions[i] -= 0.5
             particle_positions[i][particle_positions[i] < 0.0] += 1.0
             halo_com[i] -= 0.5
@@ -139,7 +143,7 @@ def get_center_and_extent(my_halo,
                                                        radius_factor=radius_factor)
     halo_size = halo_indices.size
     if halo_indices is None: sys.exit(0)
-    if my_rank == 0:
+    if yt.is_root():
         print "Halo %d has %d particles." % (my_halo['id'], halo_size)
         print "Halo center of mass: %f, %f, %f." % \
             (halo_com[0], halo_com[1], halo_com[2])
@@ -151,7 +155,8 @@ def get_center_and_extent(my_halo,
     pf = yt.load(initial_dataset)
 
     num_stars = (halo_indices >= pf.parameters['NumberOfParticles']).sum()
-    print "Removing %d star particles." % num_stars
+    if yt.is_root():
+        print "Removing %d star particles." % num_stars
     halo_indices = halo_indices[halo_indices < pf.parameters['NumberOfParticles']]
 
     axis_min = [None for axis in axes]
@@ -161,7 +166,8 @@ def get_center_and_extent(my_halo,
     save_pos = [[], [], []]
 
     my_work = slice(my_rank, None, my_size)
-    print "Reading in initial particle positions."
+    if yt.is_root():
+        print "Reading in initial particle positions."
     for grid in pf.index.grids[my_work]:
         if halo_indices.size <= 0: break
 
@@ -202,8 +208,8 @@ def get_center_and_extent(my_halo,
         if axis_min[i] is None: axis_min[i] = 2.0
         if axis_max[i] is None: axis_max[i] = -2.0
         if parallel:
-            axis_min[i] = MPI.COMM_WORLD.allreduce(axis_min[i], op=MPI.MIN)
-            axis_max[i] = MPI.COMM_WORLD.allreduce(axis_max[i], op=MPI.MAX)
+            axis_min[i] = comm.allreduce(axis_min[i], op=MPI.MIN)
+            axis_max[i] = comm.allreduce(axis_max[i], op=MPI.MAX)
 
     axis_min = np.array(axis_min)
     axis_max = np.array(axis_max)
@@ -212,7 +218,7 @@ def get_center_and_extent(my_halo,
     # Gather all positions for output
     save_pos = np.array(save_pos)
     if parallel:
-        temp_array = MPI.COMM_WORLD.gather(save_pos)
+        temp_array = comm.gather(save_pos)
         if my_rank == 0:
             all_save_pos = np.empty((3, halo_size))
             p = 0
@@ -267,9 +273,12 @@ def get_center_and_extent(my_halo,
     else:
         best_center = None
         min_size = None
+        my_region = None
+        output_fn = None
 
-    best_center = MPI.COMM_WORLD.bcast(best_center)
-    min_size = MPI.COMM_WORLD.bcast(min_size)
+    best_center = comm.bcast(best_center)
+    output_fn = comm.bcast(output_fn)
+    my_region = comm.bcast(my_region)
     return (best_center, my_region, output_fn)
         
 if __name__ == '__main__':

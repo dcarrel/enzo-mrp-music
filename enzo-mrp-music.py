@@ -6,6 +6,17 @@ import ConfigParser as cp
 import multiprocessing as mp
 from get_halo_initial_extent import *
 from particle_only_mask import *
+try:
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+    my_rank = comm.rank
+    my_size = comm.size
+    parallel = True
+    yt.enable_parallelism()
+except:
+    my_rank = 0
+    my_size = 1
+    parallel = False
 
 def parse_config(config_fn):
     # Defaults
@@ -158,16 +169,19 @@ def get_previous_run_params(params):
 
     return params
 
-def run_music(params):
+def find_lagrangian_region(params):
     particle_output_format = None if params["shape_type"] == "box" else "txt"
-    region_center, region_size, lagr_particle_file = \
+    params["region_center"], params["region_size"], params["lagr_particle_file"] = \
                get_center_and_extent(params["halo_info"],
                                      params["enzo_initial_fn"],
                                      params["enzo_final_fn"],
                                      round_size = params["round_factor"],
                                      radius_factor = params["radius_factor"],
                                      output_format = particle_output_format)
+    return params
 
+
+def run_music(params):
     #
     # Read the zoom-in MUSIC file, modify/add zoom-in parameters, and write out.
     #
@@ -187,11 +201,13 @@ def run_music(params):
                   "convex_hull" if params["shape_type"] == "exact" else params["shape_type"])
     if params["shape_type"] == "box":
         music_cf1.set("setup", "ref_center", "%f, %f, %f" % \
-                      (region_center[0], region_center[1], region_center[2]))
+                      (params["region_center"][0], params["region_center"][1],
+                              params["region_center"][2]))
         music_cf1.set("setup", "ref_extent", "%f, %f, %f" % \
-                      (region_size[0], region_size[1], region_size[2]))
+                      (params["region_size"][0], params["region_size"][1],
+                       params["region_size"][2]))
     else:
-        music_cf1.set("setup", "region_point_file", lagr_particle_file)
+        music_cf1.set("setup", "region_point_file", params["lagr_particle_file"])
         music_cf1.set("setup", "region_point_shift",
                       "%d, %d, %d" % (params["region_shift"][0], params["region_shift"][1],
                                       params["region_shift"][2]))
@@ -237,6 +253,12 @@ def run_music(params):
     return
 
 if __name__ == "__main__":
-    params = startup()
+    params = {}
+    if yt.is_root():
+        params = startup()
+    if parallel:
+        params = comm.bcast(params)
     params = get_previous_run_params(params)
-    run_music(params)
+    params = find_lagrangian_region(params)
+    if yt.is_root():
+        run_music(params)
