@@ -16,6 +16,7 @@ except:
     my_rank = 0
     my_size = 1
     parallel = False
+
 axes = ['x', 'y', 'z']
 
 Msun_to_g = 1.988921e+33
@@ -26,7 +27,7 @@ def read_from_catalog(my_halo, halo_catalog, fields=None):
     if fields is None:
         fields = {'id': 0, 'mass': 1, 'center': [7, 8, 9]}
     if 'id' not in fields:
-        print "id column not given."
+        print ("id column not given.")
         return None
     halo_data = np.loadtxt(halo_catalog)
     this_halo = halo_data[:, fields['id']] == my_halo['id']
@@ -43,31 +44,33 @@ def get_halo_sphere_particles(my_halo, par_file, radius_factor=5):
     halo_catalog = os.path.join(pf.fullpath, 'MergerHalos.out')
     if 'center' in my_halo:
         my_halo_data = my_halo
-        center = pf.arr(my_halo['center'][0], my_halo['center'][1])
-        my_halo_data['center'] = center.in_units('code_length').v
+        my_halo_data["center"] = pf.arr(my_halo['center'][0], my_halo['center'][1])
     else:
         my_halo_data = read_from_catalog(my_halo, halo_catalog)
-    rho_crit = rho_crit_now * pf.hubble_constant**2 * \
+    rho_crit = pf.quan(rho_crit_now, "g/cm**3") * pf.hubble_constant**2 * \
         (1 + pf.current_redshift)**3
     if 'mass' in my_halo:
         if isinstance(my_halo_data['mass'], tuple):
-            hmass = pf.quan(my_halo_data['mass'][0], my_halo_data['mass'][1])
+            units = my_halo_data['mass'][1]
         else:
-            hmass = pf.quan(my_halo_data['mass'], 'Msun')
-    if 'rvir' in my_halo:
-        r_200 = my_halo['rvir'] / pf.length_unit.in_units(my_halo['r_units']) * \
-                pf.length_unit.in_units('Mpc')
+            units = "Msun"
+        hmass = pf.quan(my_halo_data['mass'], units)
     else:
-        r_200 = ((3. * hmass.in_cgs().v) / \
-                     (4. * np.pi * rho_crit * 200.))**(1./3.) / Mpc_to_cm
-        
-    if yt.is_root():
-        print "Reading particles for a sphere surrounding halo %d." % my_halo['id']
-        print "Halo %d, pos: %f, %f, %f, mass: %s, r_200: %.6f Mpc." % \
-            (my_halo_data['id'], my_halo_data['center'][0], my_halo_data['center'][1],
-             my_halo_data['center'][2], hmass, r_200)
+        hmass = None
 
-    my_sphere = pf.h.sphere(my_halo_data['center'], (radius_factor * r_200, 'Mpc'))
+    if 'radius' in my_halo:
+        r_200 = pf.quan(my_halo['radius'][0], my_halo['radius'][1])
+    else:
+        r_200 = (((3. * hmass) /
+                  (4. * np.pi * rho_crit * 200.))**(1./3.)).to("Mpc")
+
+    if yt.is_root():
+        print ("Reading particles for a sphere surrounding halo %d." % my_halo['id'])
+        print ("Halo %d, pos: %f, %f, %f, mass: %s, r_200: %s." % \
+            (my_halo_data['id'], my_halo_data['center'][0], my_halo_data['center'][1],
+             my_halo_data['center'][2], hmass, r_200))
+
+    my_sphere = pf.h.sphere(my_halo_data['center'], radius_factor * r_200)
     return (my_halo_data['center'],
             my_sphere['particle_index'], 
             my_sphere['particle_mass'].in_units('Msun'),
@@ -79,7 +82,7 @@ def get_halo_particles(my_halo, par_file):
     pf = yt.load(par_file)
 
     if yt.is_root():
-        print "Reading in particles for halo %d." % my_halo['id']
+        print ("Reading in particles for halo %d." % my_halo['id'])
 
     halo_files = glob.glob(os.path.join(pf.fullpath, 'MergerHalos_*.h5'))
 
@@ -101,7 +104,7 @@ def get_halo_particles(my_halo, par_file):
     particle_positions = np.array([pos_x, pos_y, pos_z])
     if particle_indices is None:
         if yt.is_root():
-            print "Error: could not locate halo %d." % my_halo['id']
+            print ("Error: could not locate halo %d." % my_halo['id'])
         return None
     return (particle_indices, particle_masses, particle_positions)
 
@@ -118,7 +121,7 @@ def get_halo_indices(my_halo, dataset, method='sphere', radius_factor=5.0):
     for i, axis in enumerate(axes):
         if particle_positions[i].max() - particle_positions[i].min() > 0.5:
             if yt.is_root():
-                print "Halo periodic in %s." % axis
+                print ("Halo periodic in %s." % axis)
             particle_positions[i] -= 0.5
             particle_positions[i][particle_positions[i] < 0.0] += 1.0
             halo_com[i] -= 0.5
@@ -144,19 +147,19 @@ def get_center_and_extent(my_halo,
     halo_size = halo_indices.size
     if halo_indices is None: sys.exit(0)
     if yt.is_root():
-        print "Halo %d has %d particles." % (my_halo['id'], halo_size)
-        print "Halo center of mass: %f, %f, %f." % \
-            (halo_com[0], halo_com[1], halo_com[2])
-        print "Comparing datasets:\n" \
+        print ("Halo %d has %d particles." % (my_halo['id'], halo_size))
+        print ("Halo center of mass: %f, %f, %f." % \
+            (halo_com[0], halo_com[1], halo_com[2]))
+        print ("Comparing datasets:\n" \
               "\t Original: %s\n" \
-              "\t Final:    %s" % (initial_dataset, final_dataset)
+              "\t Final:    %s" % (initial_dataset, final_dataset))
         
 
     pf = yt.load(initial_dataset)
 
     num_stars = (halo_indices >= pf.parameters['NumberOfParticles']).sum()
     if yt.is_root():
-        print "Removing %d star particles." % num_stars
+        print ("Removing %d star particles." % num_stars)
     halo_indices = halo_indices[halo_indices < pf.parameters['NumberOfParticles']]
 
     axis_min = [None for axis in axes]
@@ -167,7 +170,7 @@ def get_center_and_extent(my_halo,
 
     my_work = slice(my_rank, None, my_size)
     if yt.is_root():
-        print "Reading in initial particle positions."
+        print ("Reading in initial particle positions.")
     for grid in pf.index.grids[my_work]:
         if halo_indices.size <= 0: break
 
@@ -176,7 +179,7 @@ def get_center_and_extent(my_halo,
 
         if my_indices.sum() == 0: continue
 
-        print "PROC %04d - %s: %d matching particles." % (my_rank, grid, my_indices.sum())
+        print ("PROC %04d - %s: %d matching particles." % (my_rank, grid, my_indices.sum()))
 
         for i, axis in enumerate(axes):
             particle_position = grid['particle_position_%s' % axis][my_indices].value
@@ -184,7 +187,7 @@ def get_center_and_extent(my_halo,
             if shifted[i]:
                 particle_position -= 0.5
                 particle_position[particle_position < 0.0] += 1.0
-            particle_position -= halo_com[i]
+            particle_position -= halo_com[i].v
             particle_position[particle_position > 0.5] -= 1.0
             particle_position[particle_position < -0.5] += 1.0
             my_min = particle_position.min()
@@ -230,33 +233,33 @@ def get_center_and_extent(my_halo,
         all_save_pos = save_pos
 
     if my_rank == 0:
-        print "Halo %d has %d particles (%d dark matter)." % (my_halo['id'], halo_size,
-                                                              (halo_size-num_stars))
-        print "Halo center of mass: %f, %f, %f." % \
-            (halo_com[0], halo_com[1], halo_com[2])
-        print "Initial particle extend for halo %d [in domain center]." % my_halo['id']
+        print ("Halo %d has %d particles (%d dark matter)." % (my_halo['id'], halo_size,
+                                                              (halo_size-num_stars)))
+        print ("Halo center of mass: %f, %f, %f." % \
+            (halo_com[0], halo_com[1], halo_com[2]))
+        print ("Initial particle extend for halo %d [in domain center]." % my_halo['id'])
         for i, axis in enumerate(axes):
-            print "%s: %+f to %+f [%f %f]." % (axis, axis_min[i], axis_max[i],
+            print ("%s: %+f to %+f [%f %f]." % (axis, axis_min[i], axis_max[i],
                                                (axis_min[i] + 0.5),
-                                               (axis_max[i] + 0.5))
+                                               (axis_max[i] + 0.5)))
 
 
         best_center = 0.5 * (axis_min + axis_max) + halo_com
-        print ""
-        print "Ideal center: %.12f %.12f %.12f." % \
-            (best_center[0], best_center[1], best_center[2])
+        print ("")
+        print ("Ideal center: %.12f %.12f %.12f." % \
+            (best_center[0], best_center[1], best_center[2]))
         my_region = axis_max - axis_min
-        print "Region size: %.12f %.12f %.12f." % \
-            (my_region[0], my_region[1], my_region[2])
+        print ("Region size: %.12f %.12f %.12f." % \
+            (my_region[0], my_region[1], my_region[2]))
         min_size = np.max(my_region)
-        print "Minimum cubical region size: %f." % min_size
+        print ("Minimum cubical region size: %f." % min_size)
         if round_size is not None:
             my_region = np.ceil(round_size * my_region) / round_size
-            print "Region size (to nearest 1/%d): %.12f %.12f %.12f." % \
-                (round_size, my_region[0], my_region[1], my_region[2])
+            print ("Region size (to nearest 1/%d): %.12f %.12f %.12f." % \
+                (round_size, my_region[0], my_region[1], my_region[2]))
             min_size = np.ceil(round_size * min_size) / round_size
-            print "Minimum cubical region size (to nearest 1/%d): %f." % \
-              (round_size, min_size)
+            print ("Minimum cubical region size (to nearest 1/%d): %f." % \
+              (round_size, min_size))
         output_fn = "initial_particle_positions-%d-%s" % (my_halo['id'], pf)
         if output_format == "hdf5":
             output_fn += ".h5"
@@ -285,8 +288,8 @@ if __name__ == '__main__':
     my_halo = {'id': 0,
                'center': [ 0.46977694,  0.51334109,  0.48830934],
                'mass': 3.45e8, 
-               #'rvir': 23.4,
-               'r_units': 'kpc'}
+               #'radius': 23.4,
+               'radius_units': 'kpc'}
 
     get_center_and_extent(my_halo, 'DD0000/output_0000', 'DD0020/output_0020',
                           round_size=32, radius_factor=5.0)

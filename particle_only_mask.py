@@ -1,5 +1,5 @@
 import os, sys, shutil
-import ConfigParser
+import configparser
 import numpy as np
 import h5py as h5
 
@@ -16,17 +16,18 @@ def particle_only_mask(music_config, smooth_edges=True, backup=True):
         from scipy import signal
     except:
         if smooth_edges == False:
-            print "scipy not installed. smooth_edges = True requires scipy. " \
-                  "Turning off."
+            print ("scipy not installed. smooth_edges = True requires scipy. " \
+                       "Turning off.")
             smooth_edges = True
 
-    print "Modifying RefinementMask: reading parameters..."
+    print ("Modifying RefinementMask: reading parameters...")
 
     # Read necessary parameters from config file
-    cp = ConfigParser.ConfigParser()
+    cp = configparser.ConfigParser()
     music_parms = cp.read(music_config)
     pt_file = cp.get("setup", "region_point_file")
-    pt_shift = map(int, cp.get("setup", "region_point_shift").split(","))
+    #pt_shift = map(int, cp.get("setup", "region_point_shift").split(","))
+    pt_shift = [int(rpt) for rpt in  cp.get("setup", "region_point_shift").split(",")]
     pt_level = cp.getint("setup", "region_point_levelmin")
     data_dir = cp.get("output", "filename")
     levelmin = cp.getint("setup", "levelmin")
@@ -40,10 +41,10 @@ def particle_only_mask(music_config, smooth_edges=True, backup=True):
         for l in fh:
             if l.startswith(origin_parameter):
                 values = l.split("=")[1]
-                origin = map(float, values.split())
+                origin = [float(val) for val in values.split()]
             if l.startswith(upper_parameter):
                 values = l.split("=")[1]
-                upper = map(float, values.split())
+                upper = [float(val) for val in values.split()]
 
     # Get domain shift from the log file
     log_file = "%s_log.txt" % (music_config)
@@ -68,11 +69,11 @@ def particle_only_mask(music_config, smooth_edges=True, backup=True):
     mask_fn = "%s/%s" % (data_dir, mask_name)
 
     if backup and not os.path.exists(mask_fn+".bak"):
-        print "Modifying RefinementMask: Backing up original file..."
+        print ("Modifying RefinementMask: Backing up original file...")
         shutil.copyfile(mask_fn, mask_fn+".bak")
 
     # Calculate mask from particles only
-    print "Modifying RefinementMask: Calculating the new particle mask..."
+    print ("Modifying RefinementMask: Calculating the new particle mask...")
     h5p = h5.File(mask_fn, "a")
     mask_shape = h5p[mask_name].shape[:0:-1]
 
@@ -87,7 +88,7 @@ def particle_only_mask(music_config, smooth_edges=True, backup=True):
     #import pdb; pdb.set_trace()
     # Smooth edges with Gaussian filter
     if smooth_edges:
-        print "Modifying RefinementMask: Smoothing particle mask..."
+        print ("Modifying RefinementMask: Smoothing particle mask...")
         from scipy import signal
         window = signal.gaussian(3,0.5)
         fil3d = np.outer(np.outer(window, window), window).reshape((3,3,3))
@@ -102,7 +103,7 @@ def particle_only_mask(music_config, smooth_edges=True, backup=True):
     else:
         h5p[mask_name][0,:,:,:] = newmask.T
     h5p.close()
-    print "Modifying RefinementMask: Complete."
+    print ("Modifying RefinementMask: Complete.")
 
 
 if __name__ == "__main__":

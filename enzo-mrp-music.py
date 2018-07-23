@@ -2,7 +2,7 @@ import os
 import sys
 import glob
 import yt
-import ConfigParser as cp
+import configparser as cp
 import multiprocessing as mp
 from get_halo_initial_extent import *
 from particle_only_mask import *
@@ -66,7 +66,7 @@ def parse_config(config_fn):
                            (params["halo_center"], params["halo_mass"], params["halo_radius"]))
             
     # Consolidate halo properties into a dict
-    params["halo_center"] = map(float, params["halo_center"].split(","))
+    params["halo_center"] = np.array([float(p) for p in params["halo_center"].split(",")])
     if params["halo_mass"] != None:
         params["halo_info"] = dict(center = (params["halo_center"], params["halo_center_units"]),
                                    mass = (float(params["halo_mass"]), params["halo_mass_units"]),
@@ -214,7 +214,7 @@ def run_music(params):
         music_cf1.set("setup", "region_point_levelmin", "%d" % (params["initial_min_level"]))
     
     new_config_file = "%s-L%d.conf" % (params["simulation_name"], params["level"])
-    with open(new_config_file, "wb") as fp:
+    with open(new_config_file, "w") as fp:
         music_cf1.write(fp)
 
     os.environ["OMP_NUM_THREADS"] = "%d" % (params["num_cores"])
@@ -247,7 +247,7 @@ def run_music(params):
     fp.close()
 
     # Copy initial conditions directory to the simulation run directory
-    print "Moving initial conditions to %s" % (params["sim_dir"])
+    print ("Moving initial conditions to %s" % (params["sim_dir"]))
     os.rename(ic_dir, params["sim_dir"])
 
     return
