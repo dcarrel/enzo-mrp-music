@@ -54,7 +54,7 @@ def get_halo_sphere_particles(my_halo, par_file, radius_factor=5):
             units = my_halo_data['mass'][1]
         else:
             units = "Msun"
-        hmass = pf.quan(my_halo_data['mass'], units)
+        hmass = pf.quan(my_halo_data['mass'][0], units)
     else:
         hmass = None
 
@@ -118,14 +118,16 @@ def get_halo_indices(my_halo, dataset, method='sphere', radius_factor=5.0):
         halo_com, halo_indices, particle_masses, particle_positions = \
             get_halo_sphere_particles(my_halo, dataset, radius_factor=radius_factor)
 
+    unitary_1 = halo_com.to("unitary").uq
     for i, axis in enumerate(axes):
         if particle_positions[i].max() - particle_positions[i].min() > 0.5:
             if yt.is_root():
                 print ("Halo periodic in %s." % axis)
             particle_positions[i] -= 0.5
             particle_positions[i][particle_positions[i] < 0.0] += 1.0
-            halo_com[i] -= 0.5
-            if halo_com[i] < 0.0: halo_com[i] += 1.0
+            halo_com[i] -= 0.5 * unitary_1
+            if halo_com[i] < 0.0:
+                halo_com[i] += 1.0 * unitary_1
             shifted[i] = True
     if method == 'halo':
         halo_com = (particle_positions * particle_masses).sum(axis=1) / particle_masses.sum()
