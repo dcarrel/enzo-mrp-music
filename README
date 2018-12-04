@@ -7,9 +7,17 @@ volume of some halo.
 Usage
 =====
 
-$ python enzo-mrp-music.py <level>
+$ python enzo-mrp-music.py <config-file> <level>
+
+<config-file> is the configuration file. See sample.conf for an
+example.
 
 <level> is the finest level in the initial conditions to be generated.
+
+This script can be run in parallel that will use multiple cores for
+the particle identification and searching in yt.
+
+$ mpirun -n <number-of-cores> python enzo-mrp.music.py <level>
 
 Procedure
 =========
@@ -33,13 +41,25 @@ Procedure
 Example workflow
 ================
 
-1. Run a uniform grid simulation
-2. Find halo of interest in the last output
-3. Modify halo_info and other parameters in enzo-mrp-music.py.
-   The parameters are documented above their declaration.
-4. Run "python enzo-mrp-music.py 1"
-5. Run simulation with 1 nested grid with the appropriate Enzo
+1. Create a set of initial conditions for a unigrid simulation with
+   MUSIC. Its parameter file needs to be references in this script's
+   configuration file (e.g. sample.conf) as the variable
+   template_config.  See template.conf for an example.
+   
+2. Run unigrid simulation (If an iteration after step #7, run zoom-in
+   simulation.)
+
+3. Find halo of interest in the last output
+
+4. Modify parameters in the [region] section in the configuration file
+   (e.g. sample.conf). The parameters are documented above their
+   declaration.
+   
+5. Run "python enzo-mrp-music.py sample.conf 1"
+
+6. Run simulation with 1 nested grid with the appropriate Enzo
    parameter file.  MUSIC will only give a skeleton parameter file,
    but the must-refine and nested grid parameters are given in it.
-6. If another nested grid is needed, goto step #2 and increase the
+   
+7. If another nested grid is needed, goto step #2 and increase the
    level argument by 1.  If not, you're finished!
