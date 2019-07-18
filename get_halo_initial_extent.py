@@ -288,12 +288,12 @@ def get_center_and_extent(my_halo,
         
 if __name__ == '__main__':
     my_halo = {'id': 0,
-               'center': [ 0.46977694,  0.51334109,  0.48830934],
-               'mass': 3.45e8, 
+               'center': ([ 0.46977694,  0.51334109,  0.48830934], 'code_length'),
+               'mass': (3.45e8, 'Msun'), 
                #'radius': 23.4,
                'radius_units': 'kpc'}
 
-    get_center_and_extent(my_halo, 'DD0000/output_0000', 'DD0020/output_0020',
+    get_center_and_extent(my_halo, 'DD0000/output_0000', 'DD0002/output_0002',
                           round_size=32, radius_factor=5.0)
 #    from copy import deepcopy
 #    for i in range(7,15):
