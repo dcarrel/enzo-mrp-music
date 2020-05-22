@@ -225,7 +225,7 @@ def get_center_and_extent(my_halo,
     if parallel:
         temp_array = comm.gather(save_pos)
         if my_rank == 0:
-            all_save_pos = np.empty((3, halo_size))
+            all_save_pos = np.empty((3, halo_size-num_stars))
             p = 0
             for a in temp_array:
                 s = a.shape[1]
