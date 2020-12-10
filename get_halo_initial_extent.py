@@ -281,9 +281,10 @@ def get_center_and_extent(my_halo,
         my_region = None
         output_fn = None
 
-    best_center = comm.bcast(best_center)
-    output_fn = comm.bcast(output_fn)
-    my_region = comm.bcast(my_region)
+    if parallel:
+        best_center = comm.bcast(best_center)
+        output_fn = comm.bcast(output_fn)
+        my_region = comm.bcast(my_region)
     return (best_center, my_region, output_fn)
         
 if __name__ == '__main__':
